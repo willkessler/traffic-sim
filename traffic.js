@@ -20,7 +20,7 @@ var buildTable = function() {
     }
     // console.log(innerTable);
     $('#container').html(innerTable);
-    
+
 }
 
 var initializeVehicleArray = function() {
@@ -46,6 +46,25 @@ var removeVehicle = function(vehicle) {
     vehicleArray[vehicle.position.y][vehicle.position.x] = undefined;
 };
 
+var changeLanes = function(vehicle) {
+    // console.log('Changing lanes on vehicle id: ' + vehicle.id);
+    var checkSpots = [];
+    if (vehicle.position.y == 0) {
+	checkSpots.push(1);
+    } else if (vehicle.position.y == maxRows) {
+	checkSpots.push(maxRows - 1);
+    } else {
+	checkSpots.push(vehicle.position.y - 1);
+	checkSpots.push(vehicle.position.y + 1);
+    }
+    for (var i = 0; i < checkSpots.length; i++) {
+	if (vehicleArray[checkSpots[i]][vehicle.position.x] == undefined) {
+	    vehicle.position.y = checkSpots[i];
+	}
+    }
+    console.log('Changing lanes on vehicle id: ' + vehicle.id + ' to lane: ' + vehicle.position.y);
+};
+
 var vehicleFactory = function(vId) {
     var theType = vehicleTypes[Math.floor(Math.random() * (vehicleTypes.length))];
     //console.log(theType);
@@ -66,7 +85,7 @@ var vehicleFactory = function(vId) {
 	if (vehicleArray[vehicle.position.y][newPosition] == undefined) {
 	    vehicle.position.x = newPosition;
 	} else {
-	    console.log('collision for vehicle id: ' + vehicle.id + ' with vehicle id: ' + vehicleArray[vehicle.position.y][newPosition]);
+	    changeLanes(vehicle);
 	}
 	placeVehicle(vehicle);
     };
@@ -83,4 +102,3 @@ $(function() {
 	var vehicle = vehicleFactory(i);
     }
 });
-
