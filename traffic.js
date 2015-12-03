@@ -1,7 +1,17 @@
+// TODOs
+// XX Don't always change lanes; sometimes just slow down for a bit
+// XX Randomly pick which lane to change to
+// Make bus and truck longer
+// Look at both previous squares before changing lanes
+// Sometimes just stop (accident)
+// Tailgaters: makes car in front speed up to get out of the way, and lane change
+// Big spacer types
+
+var moveInterval = 100;
 var numVehicles = 10;
 var vehicles = [];
 var vehicleArray;
-var maxRows = 6;
+var maxRows = 2;
 var maxCols = 42;
 var vehicleTypes = ['car','truck','bus'];
 var speeds = { minimum: { car: 500, truck: 2000, bus: 1000 },
@@ -46,23 +56,44 @@ var removeVehicle = function(vehicle) {
     vehicleArray[vehicle.position.y][vehicle.position.x] = undefined;
 };
 
+var moveVehicles = function() {
+    for (var i = 0; i < numVehicles; ++i) {
+	vehicles[i].speedCtr += moveInterval;
+	if (vehicles[i].speedCtr >= vehicles[i].speed) {
+	    vehicles[i].speedCtr = 0;
+	    vehicles[i].move();
+	}
+    }
+};
+
 var changeLanes = function(vehicle) {
     // console.log('Changing lanes on vehicle id: ' + vehicle.id);
+    var doItChance = Math.round(Math.random() * 2);
+//    if (doItChance > 0) {
+//	return;
+//    }
     var checkSpots = [];
     if (vehicle.position.y == 0) {
 	checkSpots.push(1);
     } else if (vehicle.position.y == maxRows) {
 	checkSpots.push(maxRows - 1);
     } else {
-	checkSpots.push(vehicle.position.y - 1);
-	checkSpots.push(vehicle.position.y + 1);
+	if (Math.round(Math.random()) == 1) {
+	    checkSpots.push(Math.max(vehicle.position.y - 1,1));
+	    checkSpots.push(Math.min(vehicle.position.y + 1,maxRows));
+	} else {
+	    checkSpots.push(Math.min(vehicle.position.y + 1,maxRows));
+	    checkSpots.push(Math.max(vehicle.position.y - 1,1));
+	}
     }
     for (var i = 0; i < checkSpots.length; i++) {
 	if (vehicleArray[checkSpots[i]][vehicle.position.x] == undefined) {
+	    console.dir(checkSpots);
+	    var lastPos  = vehicle.position.y;
 	    vehicle.position.y = checkSpots[i];
 	}
     }
-    console.log('Changing lanes on vehicle id: ' + vehicle.id + ' to lane: ' + vehicle.position.y);
+    console.log('Changing lanes on vehicle id: ' + vehicle.id + ' to lane: ' + vehicle.position.y + ' from lane: ' + lastPos);
 };
 
 var vehicleFactory = function(vId) {
@@ -74,31 +105,41 @@ var vehicleFactory = function(vId) {
 	position: {
 	    x: maxCols,
 	    y: Math.round(Math.random() * maxRows)
-	}
+	},
+	speedCtr: 0	
     };
     //console.log(vehicle);
     vehicle.speed = Math.round(Math.random() * (speeds.minimum[vehicle.type] - speeds.maximum[vehicle.type])) + speeds.maximum[vehicle.type];
-    placeVehicle(vehicle);
-    moveVehicle = function() {
+    vehicle.move = function() {
 	removeVehicle(vehicle);
-	var newPosition = (vehicle.position.x - 1 > 0 ? vehicle.position.x - 1 : maxCols);
-	if (vehicleArray[vehicle.position.y][newPosition] == undefined) {
-	    vehicle.position.x = newPosition;
+	var newX = vehicle.position.x - 1;
+	var newY = vehicle.position.y;
+	if (newX < 0) {
+	    newX = maxCols;
+	    newY = Math.round(Math.random() * maxRows);
+	}
+	vehicle.position.y = newY;
+	if (vehicleArray[vehicle.position.y][newX] == undefined) {
+	    vehicle.position.x = newX;
 	} else {
 	    changeLanes(vehicle);
 	}
 	placeVehicle(vehicle);
     };
-    setInterval(moveVehicle, vehicle.speed);
+    placeVehicle(vehicle);
     return(vehicle);
 };
 
 
+var runVehicles = function() {
+    setInterval(moveVehicles, moveInterval);
+};
 
 $(function() {
     buildTable();
     vehicleArray = initializeVehicleArray();
     for (var i = 0; i++ < numVehicles;) {
-	var vehicle = vehicleFactory(i);
+	vehicles.push(vehicleFactory(i));
     }
+    runVehicles();
 });
