@@ -1,6 +1,10 @@
 // TODOs
 // XX Don't always change lanes; sometimes just slow down for a bit
 // XX Randomly pick which lane to change to
+// 2,3, and 4 square look-ahead for lane changes (drivers that want to maintain speed)
+// Aggressive drivers vs more relaxed drivers
+// Drivers pulling off the road
+// Stopsigns and traffic lights
 // Make bus and truck longer
 // Look at both previous squares before changing lanes
 // Sometimes just stop (accident)
@@ -20,9 +24,9 @@ var speeds = { minimum: { car: 500, truck: 2000, bus: 1000 },
 
 var buildTable = function() {
     var innerTable = '';
-    for (var i = 0; i++ < maxRows; ) {
+    for (var i = 0; i < maxRows; i++) {
 	innerTable += '<div class="row">';
-	for (var j = 0; j++ < maxCols; ) {
+	for (var j = 0; j < maxCols; j++) {
 	    var idStr = j + '-' + i;
 	    innerTable += '<div class="cell" id="cell-' + idStr + '">&nbsp;</div>';
 	}
@@ -75,21 +79,21 @@ var changeLanes = function(vehicle) {
     var checkSpots = [];
     if (vehicle.position.y == 0) {
 	checkSpots.push(1);
-    } else if (vehicle.position.y == maxRows) {
-	checkSpots.push(maxRows - 1);
+    } else if (vehicle.position.y == maxRows - 1) {
+	checkSpots.push(maxRows - 2);
     } else {
 	if (Math.round(Math.random()) == 1) {
-	    checkSpots.push(Math.max(vehicle.position.y - 1,1));
-	    checkSpots.push(Math.min(vehicle.position.y + 1,maxRows));
+	    checkSpots.push(Math.max(vehicle.position.y - 1,0));
+	    checkSpots.push(Math.min(vehicle.position.y + 1,maxRows - 1));
 	} else {
-	    checkSpots.push(Math.min(vehicle.position.y + 1,maxRows));
-	    checkSpots.push(Math.max(vehicle.position.y - 1,1));
+	    checkSpots.push(Math.min(vehicle.position.y + 1,maxRows - 1));
+	    checkSpots.push(Math.max(vehicle.position.y - 1,0));
 	}
     }
+    var lastPos  = vehicle.position.y;
     for (var i = 0; i < checkSpots.length; i++) {
 	if (vehicleArray[checkSpots[i]][vehicle.position.x] == undefined) {
 	    console.dir(checkSpots);
-	    var lastPos  = vehicle.position.y;
 	    vehicle.position.y = checkSpots[i];
 	}
     }
@@ -104,7 +108,7 @@ var vehicleFactory = function(vId) {
 	type: theType,
 	position: {
 	    x: maxCols,
-	    y: Math.round(Math.random() * maxRows)
+	    y: Math.round(Math.random() * (maxRows - 1))
 	},
 	speedCtr: 0	
     };
