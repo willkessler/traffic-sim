@@ -73,9 +73,9 @@ var moveVehicles = function() {
 var changeLanes = function(vehicle) {
     // console.log('Changing lanes on vehicle id: ' + vehicle.id);
     var doItChance = Math.round(Math.random() * 2);
-//    if (doItChance > 0) {
-//	return;
-//    }
+    if (doItChance > 0) {
+	return;
+    }
     var checkSpots = [];
     if (vehicle.position.y == 0) {
 	checkSpots.push(1);
