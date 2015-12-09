@@ -1,25 +1,34 @@
 // TODOs
-// XX Don't always change lanes; sometimes just slow down for a bit
-// XX Randomly pick which lane to change to
+// Make buses and trucks longer
+// Variable speed in each vehicle depending on circumstances, but they try to maintain "preferred" speed
+// If you just switched from one lane, don't switch back to that same lane immediately even if worse blocked
+// Change langes to one square in front of you
 // 2,3, and 4 square look-ahead for lane changes (drivers that want to maintain speed)
+// Make sure to wrap forward check around to right side
 // Aggressive drivers vs more relaxed drivers
 // Drivers pulling off the road
 // Stopsigns and traffic lights
-// Make bus and truck longer
 // Look at both previous squares before changing lanes
 // Sometimes just stop (accident)
 // Tailgaters: makes car in front speed up to get out of the way, and lane change
 // Big spacer types
+// Motorcycles/lane splitters
+// Construction blockag
 
-var moveInterval = 100;
+// DONES:
+// XX Don't always change lanes; sometimes just slow down for a bit
+// XX Randomly pick which lane to change to
+
+var maxSpeedCtr = 1000;
+var moveInterval = 10;
 var numVehicles = 10;
 var vehicles = [];
 var vehicleArray;
-var maxRows = 2;
-var maxCols = 42;
+var maxRows = 3;
+var maxCols = 59;
 var vehicleTypes = ['car','truck','bus'];
-var speeds = { minimum: { car: 500, truck: 2000, bus: 1000 },
-	       maximum: { car: 10, truck: 200, bus: 50 }
+var speeds = { minimum: { car: 45, truck: 25, bus: 15 },
+	       maximum: { car: 85, truck: 75, bus: 55 }
 	     };
 
 var buildTable = function() {
@@ -62,8 +71,8 @@ var removeVehicle = function(vehicle) {
 
 var moveVehicles = function() {
     for (var i = 0; i < numVehicles; ++i) {
-	vehicles[i].speedCtr += moveInterval;
-	if (vehicles[i].speedCtr >= vehicles[i].speed) {
+	vehicles[i].speedCtr += vehicles[i].speed ;
+	if (vehicles[i].speedCtr >= maxSpeedCtr) {
 	    vehicles[i].speedCtr = 0;
 	    vehicles[i].move();
 	}
@@ -73,9 +82,9 @@ var moveVehicles = function() {
 var changeLanes = function(vehicle) {
     // console.log('Changing lanes on vehicle id: ' + vehicle.id);
     var doItChance = Math.round(Math.random() * 2);
-    if (doItChance > 0) {
-	return;
-    }
+//    if (doItChance > 0) {
+//	return;
+//    }
     var checkSpots = [];
     if (vehicle.position.y == 0) {
 	checkSpots.push(1);
@@ -110,20 +119,39 @@ var vehicleFactory = function(vId) {
 	    x: maxCols,
 	    y: Math.round(Math.random() * (maxRows - 1))
 	},
-	speedCtr: 0	
+	speedCtr: 0,
+	cautionLevel: Math.round(Math.random() * 100), // used for how much space to keep in front
+	switchiness:  Math.round(Math.random() * 100), // propensity to change lanes if something in front of the driver
     };
     //console.log(vehicle);
-    vehicle.speed = Math.round(Math.random() * (speeds.minimum[vehicle.type] - speeds.maximum[vehicle.type])) + speeds.maximum[vehicle.type];
+    vehicle.speed = Math.round(Math.random() * (speeds.maximum[vehicle.type] - speeds.minimum[vehicle.type])) + speeds.minimum[vehicle.type];
+    console.log('set vehicle id ' + vehicle.id + ' of type ' + vehicle.type + ' to speed ' + vehicle.speed);
+    vehicle.isClearInFront = function() {
+	// Check if there's enough space in front of you to move. Depending on driver "cautionLevel" value, this may be more or less spaces.
+	// Number of squares to check : (speed / 10) * cautionLevel. Ie, more cautious leaves more space, one square for each 10mph
+	var numSquaresToCheck = Math.round((vehicle.speed / 10) * (vehicle.cautionLevel / 100));
+
+	var clear = true;
+	for (var i = 1, newX, newY; i <= numSquaresToCheck; ++i) {
+	    var newX = Math.max(vehicle.position.x - i,0);
+	    if (vehicleArray[vehicle.position.y][newX] !== undefined) {
+		clear = false;
+		console.log('Vehicle id ' + vehicle.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + vehicle.cautionLevel);
+		break;
+	    }
+	}
+	return(clear);
+    };
     vehicle.move = function() {
 	removeVehicle(vehicle);
 	var newX = vehicle.position.x - 1;
 	var newY = vehicle.position.y;
 	if (newX < 0) {
-	    newX = maxCols;
+	    newX = maxCols;	// when vehicle wraps around, put them in a new row for variety's sake
 	    newY = Math.round(Math.random() * maxRows);
 	}
 	vehicle.position.y = newY;
-	if (vehicleArray[vehicle.position.y][newX] == undefined) {
+	if (vehicle.isClearInFront()) {
 	    vehicle.position.x = newX;
 	} else {
 	    changeLanes(vehicle);
