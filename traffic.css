@@ -42,4 +42,31 @@ body {
     background-color:#aaa;
 }
 
-    
+.hot {
+    background-color:#f00;
+}
+
+.normal {
+  background-color:#fff;
+}
+
+table {
+  font-size:9px;
+}
+
+tr {
+  padding:2px !important;
+}
+
+td {
+  padding:2px !important;
+}
+
+.control_label, .arrow {
+  font-size:12px;
+  font-weight:bold;
+}
+
+.arrow {
+  cursor:pointer;
+}

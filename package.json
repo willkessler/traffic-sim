@@ -1,0 +1,10 @@
+{
+  "name": "traffic-app",
+  "version": "1.0.0",
+  "description": "Traffic simulator in reactjs",
+  "author": "WK",
+  "license": "MIT",
+  "dependencies": {
+    "live-server": "^1.1.0"
+  }
+}
