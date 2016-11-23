@@ -5,13 +5,13 @@ class ArrowControl extends React.Component {
     this.direction = this.props.direction;
   }
 
-  handleClick = () => {
+  handleControlClicked = () => {
     console.log('You clicked the arrow with direction', this.direction);
-    this.props.tableSizer(this.direction);
+    this.props.handleControlClicked(this.direction);
   }
 
   render() {
-    return (<span className="arrow" onClick={this.handleClick}> { (this.direction == "down" ? "<" : ">") } </span>);
+    return (<span className="arrow" onClick={this.handleControlClicked}> { (this.direction == "down" ? "<" : ">") } </span>);
   }
 
 }
@@ -22,7 +22,9 @@ class Cell extends React.Component {
   }
 
   render() {
-    return (<td id={this.props.key} className={ (this.props.name == this.props.hotCell ? "Hot" : "Normal") }> { this.props.name} </td>);
+    var isHot = (this.props.name == this.props.hotCell ? "car" : " ");
+    let cellClasses = `${isHot} cell`;
+    return (<div className={cellClasses}> { this.props.name} </div>);
   }
 }
 
@@ -44,7 +46,7 @@ class Table extends React.Component {
   componentDidMount() {
     this.timerID = setInterval(
       () => this.tick(),
-      100
+      1000
     );
   }
 
@@ -68,7 +70,7 @@ class Table extends React.Component {
       for (var j = 0; j < this.numCols; ++j) {
         colJsx.push(<Cell hotCell={this.state.hotCell} name={`${i}-${j}`} key={`${i}:${j}`} />);
       }
-      rowJsx.push(<tr> {colJsx} </tr>);
+      rowJsx.push(<div className="row"> {colJsx} </div>);
     }
     return rowJsx;
   }
@@ -102,9 +104,9 @@ class TrafficApp extends React.Component {
   render() {
     return (
       <div id="app">
-      <ArrowControl direction="down" tableSizer={this.tableSizer}/>
+      <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>
       <span className="control_label">{this.state.tableRows} Lanes</span>
-      <ArrowControl direction="up" tableSizer={this.tableSizer} />
+      <ArrowControl direction="up" handleControlClicked={this.tableSizer} />
       <div><Table tableRows={this.state.tableRows} /></div>
       </div>
     );

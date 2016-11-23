@@ -1,49 +1,52 @@
 html, body {
-    margin: 0;
-    padding: 0;
-    background-color: White;
-    overflow: auto;
+  margin: 5px;
+  padding: 0;
+  background-color: White;
+  overflow: auto;
 }
 body {
-    font: 11px Helvetica, Arial, sans-serif;
+  font: 11px Helvetica, Arial, sans-serif;
 }
+
 #container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
+
 .row {
-    width:1440px;
-    border:1px solid red;
-    float:left;
+  /* width:1440px;*/
+  float:left;
 }
+
 .cell {
-    width:22px;
-    height:22px;
-    border:1px solid #ddd;
-    float:left;
-    font-size:14px;
-    font-weight:bold;
-    color:#fff;
-    text-align:center;
+  width:28px;
+  height:22px;
+  border:1px solid #ddd;
+  border-bottom:1px solid red;
+  float:left;
+  font-size:10px;
+  font-weight:bold;
+  color:#fff;
+  text-align:center;
 }
 
 .car {
-    background-color:#f00;
+  background-color:#f00;
 }
 
 .bus {
-    background-color:#00f;
+  background-color:#00f;
 }
 
 .truck {
-    background-color:#aaa;
+  background-color:#aaa;
 }
 
 .hot {
-    background-color:#f00;
+  background-color:#f00;
 }
 
 .normal {
