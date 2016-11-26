@@ -1,3 +1,179 @@
+var Dog = class {
+  constructor(props) {
+    this.state = {
+      treats: props.treats
+    }
+  }
+  
+  eat() {
+    this.state.treats = this.state.treats + 1;
+    console.log('I ate ' + this.state.treats + ' treats today');
+  }
+}
+
+var dog = new Dog({treats:1});
+
+class Vehicle {
+
+  constructor(props) {
+    var theType = props.vehicleTypes[Math.floor(Math.random() * (props.vehicleTypes.length))];
+    //console.log(theType);
+    this.id = props.vId;
+    this.type = theType;
+    this.vehicleArray = props.vehicleArray;
+    this.maxRows = props.maxRows;
+    this.maxCols = props.maxCols;
+    this.position = {
+      x: props.maxCols,
+      y: Math.round(Math.random() * (props.maxRows - 1))
+    };
+    this.speedCtr = 0;
+    this.cautionLevel = Math.round(Math.random() * 100); // used for how much space to keep in front
+    this.switchiness =  Math.round(Math.random() * 100); // propensity to change lanes if something in front of the driver
+    this.speed = Math.round(Math.random() * (props.speeds.maximum[this.type] - props.speeds.minimum[this.type])) + props.speeds.minimum[this.type];
+
+    console.log('set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed);
+    this.placeOrRemove('place');
+
+  }
+
+
+  isClearInFront = () => {
+    // Check if there's enough space in front of you to move. Depending on driver "cautionLevel" value, this may be more or less spaces.
+    // Number of squares to check : (speed / 10) * cautionLevel. Ie, more cautious leaves more space, one square for each 10mph
+    var numSquaresToCheck = Math.round((this.speed / 10) * (this.cautionLevel / 100));
+
+    var clear = true;
+    for (var i = 1, newX, newY; i <= numSquaresToCheck; ++i) {
+      var newX = Math.max(this.position.x - i,0);
+      if (this.vehicleArray[this.position.y][newX] !== undefined) {
+        clear = false;
+        console.log('Vehicle id ' + this.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + this.cautionLevel);
+        break;
+      }
+      return(clear);
+    }
+  }
+
+  placeOrRemove = (which) => {
+    var vId = this.position.x + '-' + this.position.y;
+    this.vehicleArray[this.position.y][this.position.x] = (which == 'place' ? this.id : undefined);
+    console.log(which + 'd vehicle with id:' + this.id);
+  }
+
+
+  changeLanes = () => {
+    // console.log('Changing lanes on vehicle id: ' + vehicle.id);
+    var doItChance = Math.round(Math.random() * 2);
+    //    if (doItChance > 0) {
+    //      return;
+    //    }
+    var checkSpots = [];
+    if (this.position.y == 0) {
+      checkSpots.push(1);
+    } else if (this.position.y == this.maxRows - 1) {
+      checkSpots.push(this.maxRows - 2);
+    } else {
+      if (Math.round(Math.random()) == 1) {
+        checkSpots.push(Math.max(this.position.y - 1, 0));
+        checkSpots.push(Math.min(this.position.y + 1, this.maxRows - 1));
+      } else {
+        checkSpots.push(Math.min(this.position.y + 1, this.maxRows - 1));
+        checkSpots.push(Math.max(this.position.y - 1, 0));
+      }
+    }
+    var lastPos  = this.position.y;
+    for (var i = 0; i < checkSpots.length; i++) {
+      if (this.vehicleArray[checkSpots[i]][this.position.x] == undefined) {
+        console.dir(checkSpots);
+        this.position.y = checkSpots[i];
+      }
+    }
+    console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
+  }
+
+  update = () => {
+    this.speedCtr += this.speed ;
+    if (this.speedCtr >= this.maxSpeedCtr) {
+      this.speedCtr = 0;
+      placeOrRemove('remove');
+      var newX = this.position.x - 1;
+      var newY = this.position.y;
+      if (newX < 0) {
+        newX = this.maxCols;     // when vehicle wraps around, put them in a new row for variety's sake
+        newY = Math.round(Math.random() * this.maxRows);
+      }
+      this.position.y = newY;
+      if (this.isClearInFront()) {
+        this.position.x = newX;
+      } else {
+        this.changeLanes();
+      }
+      this.placeOrremove('place');
+    }
+    // console.log('Updated vehicle:', this.id);
+  }
+
+
+}
+
+
+/* The vehicleManager executes the logic of the cars, and passes the latest vehicle array back for rendering */
+var VehicleManager = class {
+  constructor(props) {
+    this.numVehicles = props.numVehicles;
+    this.maxRows = props.maxRows;
+    this.maxCols = props.maxCols;
+    this.maxSpeedCtr = 1000;
+    this.vehicleTypes = ['car','truck','bus'];
+    this.speeds = { 
+      minimum: { car: 45, truck: 25, bus: 15 },
+      maximum: { car: 85, truck: 75, bus: 55 }
+    };
+    this.vehicles = [];
+
+    this.initializeVehicleArray();
+    this.initializeVehicles();
+  }
+
+
+  initializeVehicleArray = () => {
+    this.vehicleArray = new Array(this.maxRows);
+    for (var i = 0; i < this.maxCols; i++) {
+      this.vehicleArray[i] = new Array(this.maxCols);
+    }
+    console.log('Initialized vehicles array');
+  }
+  
+  initializeVehicles = () => {
+    var newVehicle;
+    var  props = {
+      vehicleArray: this.vehicleArray, 
+      vehicleTypes: this.vehicleTypes,
+      maxRows:      this.maxRows, 
+      maxCols:      this.maxCols, 
+      speeds:       this.speeds
+    };
+    for (var i = 0; i++ < this.numVehicles;) {
+      props.vId = i;
+      newVehicle = new Vehicle(props);
+      this.vehicles.push(newVehicle);
+    }
+    console.log('Initialized vehicles');
+  }
+  
+  update = () => {
+    for (let vehicle of this.vehicles) {
+      vehicle.update();
+    }
+  }
+
+  getVehicles = () => {
+    return(this.vehicles);
+  }
+
+}
+
 
 class ArrowControl extends React.Component {
   constructor(props) {
@@ -28,13 +204,18 @@ class Cell extends React.Component {
   }
 }
 
-class Table extends React.Component {
+class Road extends React.Component {
 
   constructor(props) {
     super(props);
     this.numCols = 40;
     this.state = { 
-      hotCell: '0-0'
+      hotCell: '0-0',
+      vehicleManager: new VehicleManager({
+        numVehicles: 10,
+        maxRows: 5,
+        maxCols: 50
+      })
     };
   }
 
@@ -59,12 +240,14 @@ class Table extends React.Component {
     this.setState({
       hotCell: newHotCell
     });
+    this.state.vehicleManager.update();
+    var allVehicles = this.state.vehicleManager.getVehicles();
+    console.log('allVehicles = ', allVehicles);
   }
 
   generateRows() {
     var rowJsx = [];
     var colJsx;
-    console.log('inside generateRows, tableRows=', this.props.tableRows);
     for (var i = 0; i < this.props.tableRows; ++i) {
       colJsx = [];
       for (var j = 0; j < this.numCols; ++j) {
@@ -92,7 +275,7 @@ class TrafficApp extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 
-      tableRows : this.props.tableRows 
+      tableRows : this.props.tableRows
     };
   }
 
@@ -107,7 +290,7 @@ class TrafficApp extends React.Component {
       <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>
       <span className="control_label">{this.state.tableRows} Lanes</span>
       <ArrowControl direction="up" handleControlClicked={this.tableSizer} />
-      <div><Table tableRows={this.state.tableRows} /></div>
+      <div><Road tableRows={this.state.tableRows} /></div>
       </div>
     );
   }
