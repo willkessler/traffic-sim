@@ -242,13 +242,13 @@ class Road extends React.Component {
       hotCell: newHotCell
     });
     this.state.vehicleManager.update();
-    var allVehicles = this.state.vehicleManager.getVehicles();
-    console.log('allVehicles = ', allVehicles);
   }
 
   generateRows() {
     var rowJsx = [];
     var colJsx;
+    var allVehicles = this.state.vehicleManager.getVehicles();
+    console.log('allVehicles = ', allVehicles);
     for (var i = 0; i < this.props.tableRows; ++i) {
       colJsx = [];
       for (var j = 0; j < this.numCols; ++j) {
