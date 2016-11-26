@@ -23,6 +23,7 @@ class Vehicle {
     this.vehicleArray = props.vehicleArray;
     this.maxRows = props.maxRows;
     this.maxCols = props.maxCols;
+    this.maxSpeedCtr = props.maxSpeedCtr;
     this.position = {
       x: props.maxCols,
       y: Math.round(Math.random() * (props.maxRows - 1))
@@ -83,20 +84,20 @@ class Vehicle {
       }
     }
     var lastPos  = this.position.y;
-    for (var i = 0; i < checkSpots.length; i++) {
-      if (this.vehicleArray[checkSpots[i]][this.position.x] == undefined) {
-        console.dir(checkSpots);
-        this.position.y = checkSpots[i];
+    for (let checkSpot in checkSpots) {
+      if (this.vehicleArray[checkSpot][this.position.x] == undefined) {
+        console.log('checkSpot:', checkSpot);
+        this.position.y = checkSpot;
       }
     }
     console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
   }
 
   update = () => {
-    this.speedCtr += this.speed ;
+    this.speedCtr += this.speed;
     if (this.speedCtr >= this.maxSpeedCtr) {
       this.speedCtr = 0;
-      placeOrRemove('remove');
+      this.placeOrRemove('remove');
       var newX = this.position.x - 1;
       var newY = this.position.y;
       if (newX < 0) {
@@ -109,9 +110,8 @@ class Vehicle {
       } else {
         this.changeLanes();
       }
-      this.placeOrremove('place');
+      this.placeOrRemove('place');
     }
-    // console.log('Updated vehicle:', this.id);
   }
 
 
@@ -152,6 +152,7 @@ var VehicleManager = class {
       vehicleTypes: this.vehicleTypes,
       maxRows:      this.maxRows, 
       maxCols:      this.maxCols, 
+      maxSpeedCtr:  this.maxSpeedCtr,
       speeds:       this.speeds
     };
     for (var i = 0; i++ < this.numVehicles;) {
@@ -227,7 +228,7 @@ class Road extends React.Component {
   componentDidMount() {
     this.timerID = setInterval(
       () => this.tick(),
-      1000
+      100
     );
   }
 
