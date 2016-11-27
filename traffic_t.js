@@ -33,8 +33,9 @@ class Vehicle {
     this.switchiness =  Math.round(Math.random() * 100); // propensity to change lanes if something in front of the driver
     this.speed = Math.round(Math.random() * (props.speeds.maximum[this.type] - props.speeds.minimum[this.type])) + props.speeds.minimum[this.type];
 
-    console.log('set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed);
+    //console.log('set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed);
     this.placeOrRemove('place');
+    console.log('after placing, ' , this.vehicleArray)
 
   }
 
@@ -47,9 +48,9 @@ class Vehicle {
     var clear = true;
     for (var i = 1, newX, newY; i <= numSquaresToCheck; ++i) {
       var newX = Math.max(this.position.x - i,0);
-      if (this.vehicleArray[this.position.y][newX] !== undefined) {
+      if (this.vehicleArray[this.position.y + '-' + newX] !== undefined) {
         clear = false;
-        console.log('Vehicle id ' + this.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + this.cautionLevel);
+        //console.log('Vehicle id ' + this.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + this.cautionLevel);
         break;
       }
       return(clear);
@@ -58,8 +59,14 @@ class Vehicle {
 
   placeOrRemove = (which) => {
     var vId = this.position.x + '-' + this.position.y;
-    this.vehicleArray[this.position.y][this.position.x] = (which == 'place' ? this.id : undefined);
-    console.log(which + 'd vehicle with id:' + this.id);
+    var vehicleKey = this.position.y + '-' + this.position.x;
+    if (which == 'place') {
+      this.vehicleArray[vehicleKey] = true;
+      console.log('we placed vehicle id ', vId, ' at ', vehicleKey);
+    } else {
+      delete(this.vehicleArray(vehicleKey));
+    }
+
   }
 
 
@@ -85,12 +92,13 @@ class Vehicle {
     }
     var lastPos  = this.position.y;
     for (let checkSpot in checkSpots) {
-      if (this.vehicleArray[checkSpot][this.position.x] == undefined) {
-        console.log('checkSpot:', checkSpot);
+      let vehicleCoordinates = checkSpot + '-' + this.position.x;
+      if (!this.vehicleArray.hasOwnProperty(vehicleCoordinates)) {
+        //console.log('checkSpot:', checkSpot);
         this.position.y = checkSpot;
       }
     }
-    console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
+    //console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
   }
 
   update = () => {
@@ -132,7 +140,7 @@ var VehicleManager = class {
     };
     this.vehicles = [];
 
-    this.initializeVehicleArray();
+    this.vehicleArray = {};
     this.initializeVehicles();
   }
 
@@ -170,7 +178,10 @@ var VehicleManager = class {
   }
 
   getVehicles = () => {
-    return(this.vehicles);
+    return({ 
+      vehicles: this.vehicles,
+      vehicleArray: this.vehicleArray
+    });
   }
 
 }
@@ -182,7 +193,8 @@ class ArrowControl extends React.Component {
     this.direction = this.props.direction;
   }
 
-  handleControlClicked = () => {
+  handleControlClicked = (e) => {
+    e.preventDefault();    
     console.log('You clicked the arrow with direction', this.direction);
     this.props.handleControlClicked(this.direction);
   }
@@ -228,7 +240,7 @@ class Road extends React.Component {
   componentDidMount() {
     this.timerID = setInterval(
       () => this.tick(),
-      100
+      10000
     );
   }
 
@@ -247,12 +259,17 @@ class Road extends React.Component {
   generateRows() {
     var rowJsx = [];
     var colJsx;
-    var allVehicles = this.state.vehicleManager.getVehicles();
-    console.log('allVehicles = ', allVehicles);
+    var vehicles = this.state.vehicleManager.getVehicles();
+    //console.log('allVehicles = ', allVehicles);
+    var hotCell;
+    var vehicleCoordinates;
+    console.log('vehicleArray=',vehicles.vehicleArray);
     for (var i = 0; i < this.props.tableRows; ++i) {
       colJsx = [];
       for (var j = 0; j < this.numCols; ++j) {
-        colJsx.push(<Cell hotCell={this.state.hotCell} name={`${i}-${j}`} key={`${i}:${j}`} />);
+        vehicleCoordinates = i + '-' + j;
+        hotCell = (vehicles.vehicleArray.hasOwnProperty(vehicleCoordinates) ? vehicleCoordinates : '');
+        colJsx.push(<Cell hotCell={hotCell} name={`${i}-${j}`} key={`${i}:${j}`} />);
       }
       rowJsx.push(<div className="row"> {colJsx} </div>);
     }
