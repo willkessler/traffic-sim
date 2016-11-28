@@ -41,49 +41,22 @@ class Vehicle {
     // Number of squares to check : (speed / 10) * cautionLevel. Ie, more cautious leaves more space, one square for each 10mph
     var numSquaresToCheck = Math.round((this.speed / 10) * (this.cautionLevel / 100));
 
-    var clear = true;
+    var clear = true, newX, vehicleKey;
     for (var i = 1, newX, newY; i <= numSquaresToCheck; ++i) {
-      var newX = Math.max(this.position.x - i,0);
-      if (this.vehicleArray[this.position.y + '-' + newX] !== undefined) {
+      newX = Math.max(this.position.x - i,0);
+      vehicleKey = this.position.y + '-' + newX;
+      if (this.vehicleArray.hasOwnProperty(vehicleKey)) {
         clear = false;
         //console.log('Vehicle id ' + this.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + this.cautionLevel);
         break;
       }
-      return(clear);
     }
+    return(clear);
   }
-
-  placeOrRemove = (which) => {
-    if (which == 'random') {
-      var placed = false;
-      while (!placed) {
-        this.position = {
-          x: Math.round(Math.random() * (this.maxCols - 1)),
-          y: Math.round(Math.random() * (this.maxRows - 1))
-        };
-        vehicleKey = this.position.y + '-' + this.position.x;
-        console.log('Trying to place id:',this.id, 'at position:', vehicleKey);
-        if (!this.vehicleArray.hasOwnProperty(vehicleKey)) {
-          this.vehicleArray[vehicleKey] = this.id;
-          placed = true;
-        }
-      }
-    } else {
-      var vehicleKey = this.position.y + '-' + this.position.x;
-      if (which == 'place') {
-        this.vehicleArray[vehicleKey] = this.id;
-        console.log('we placed vehicle id', this.id, 'at', vehicleKey);
-      } else {
-        console.log('unplacing vehicle id:', this.id, 'from spot:', vehicleKey);
-        delete(this.vehicleArray[vehicleKey]);
-      }
-    }
-  }
-
 
   changeLanes = () => {
     // console.log('Changing lanes on vehicle id: ' + vehicle.id);
-    var doItChance = Math.round(Math.random() * 2);
+    // var doItChance = Math.round(Math.random() * 2);
     //    if (doItChance > 0) {
     //      return;
     //    }
@@ -102,14 +75,41 @@ class Vehicle {
       }
     }
     var lastPos  = this.position.y;
-    for (let checkSpot in checkSpots) {
+    for (const checkSpot of checkSpots) {
       let vehicleCoordinates = checkSpot + '-' + this.position.x;
       if (!this.vehicleArray.hasOwnProperty(vehicleCoordinates)) {
-        //console.log('checkSpot:', checkSpot);
-        this.position.y = checkSpot;
+        //console.log('move vehicle:', this.id, 'from spot:' + this.position.y, 'to spot:', checkSpot);
+        this.position.y = checkSpot; // bleah, for (let...) seems to convert integer array elements into strings.
       }
     }
     //console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
+  }
+
+  placeOrRemove = (which) => {
+    if (which == 'random') {
+      var placed = false;
+      while (!placed) {
+        this.position = {
+          x: Math.round(Math.random() * (this.maxCols - 1)),
+          y: Math.round(Math.random() * (this.maxRows - 1))
+        };
+        vehicleKey = this.position.y + '-' + this.position.x;
+        //console.log('Trying to place id:',this.id, 'at position:', vehicleKey);
+        if (!this.vehicleArray.hasOwnProperty(vehicleKey)) {
+          this.vehicleArray[vehicleKey] = this.id;
+          placed = true;
+        }
+      }
+    } else {
+      var vehicleKey = this.position.y + '-' + this.position.x;
+      if (which == 'place') {
+        this.vehicleArray[vehicleKey] = this.id;
+        //console.log('We placed vehicle id', this.id, 'at', vehicleKey);
+      } else {
+        //console.log('Unplacing vehicle id:', this.id, 'from spot:', vehicleKey);
+        delete(this.vehicleArray[vehicleKey]);
+      }
+    }
   }
 
   update = () => {
@@ -120,15 +120,16 @@ class Vehicle {
       var newX = this.position.x - 1;
       var newY = this.position.y;
       if (newX < 0) {
-        newX = this.maxCols;     // when vehicle wraps around, put them in a new row for variety's sake
-        newY = Math.round(Math.random() * this.maxRows);
+        newX = this.maxCols - 1; 
+        // When vehicle wraps around, put them in a new row for variety's sake
+        // newY = Math.round(Math.random() * this.maxRows);
       }
       this.position.y = newY;
       if (this.isClearInFront()) {
-        console.log('moving vehicle forward.');
+        //console.log('moving vehicle forward.');
         this.position.x = newX;
       } else {
-        console.log('changing lanes.');
+        //console.log('Trying to change lanes on id', this.id, 'currently in lane:', this.position.y);
         this.changeLanes();
       }
       this.placeOrRemove('place');
@@ -230,7 +231,7 @@ class Cell extends React.Component {
     } else {
       cellClasses = 'cell';
     }
-    return (<div className={cellClasses}> { this.props.name} </div>);
+    return (<div className={cellClasses}> {this.props.name} </div>);
   }
 }
 
@@ -258,7 +259,7 @@ class Road extends React.Component {
   componentDidMount() {
     this.timerID = setInterval(
       () => this.tick(),
-      100
+      10
     );
   }
 
@@ -267,10 +268,6 @@ class Road extends React.Component {
   }
 
   tick() {
-    /* var newHotCell = this.getRandomInt(0,this.props.tableRows - 1) + '-' + this.getRandomInt(0,this.numCols - 1);
-     * this.setState({
-     *   hotCell: newHotCell
-     * });*/
     this.vehicleManager.update();
     this.setState({
       vehiclesHash : this.vehicleManager.getVehicles()
@@ -289,7 +286,8 @@ class Road extends React.Component {
       for (var j = 0; j < this.numCols; ++j) {
         vehicleCoordinates = i + '-' + j;
         vehicleId = (this.state.vehiclesHash.vehicleArray.hasOwnProperty(vehicleCoordinates) ? this.state.vehiclesHash.vehicleArray[vehicleCoordinates] : -1);
-        colJsx.push(<Cell vehicleId={vehicleId} vehicles={this.state.vehiclesHash.vehicles} name={`${i}-${j}`} />);
+        // colJsx.push(<Cell vehicleId={vehicleId} vehicles={this.state.vehiclesHash.vehicles} name={`${i}-${j}`} />);
+        colJsx.push(<Cell vehicleId={vehicleId} vehicles={this.state.vehiclesHash.vehicles} name={vehicleId} />);
       }
       rowJsx.push(<div className="row"> {colJsx} </div>);
     }
@@ -336,6 +334,6 @@ class TrafficApp extends React.Component {
 }
 
 ReactDOM.render(
-  <TrafficApp tableRows={5} />,
+  <TrafficApp tableRows={6} />,
   document.getElementById('root')
 );
