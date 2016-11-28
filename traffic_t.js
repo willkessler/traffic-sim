@@ -31,7 +31,7 @@ class Vehicle {
 
     //console.log('set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed);
     this.placeOrRemove('random');
-    console.log('after placing, ' , this.vehicleArray)
+    console.log('after placing, ' , props.vehicleArray);
 
   }
 
@@ -54,7 +54,6 @@ class Vehicle {
   }
 
   placeOrRemove = (which) => {
-    var vehicleKey;
     if (which == 'random') {
       var placed = false;
       while (!placed) {
@@ -63,19 +62,22 @@ class Vehicle {
           y: Math.round(Math.random() * (this.maxRows - 1))
         };
         vehicleKey = this.position.y + '-' + this.position.x;
+        console.log('Trying to place id:',this.id, 'at position:', vehicleKey);
         if (!this.vehicleArray.hasOwnProperty(vehicleKey)) {
           this.vehicleArray[vehicleKey] = this.id;
           placed = true;
         }
       }
-    } else if (which == 'place') {
-      vehicleKey = this.position.y + '-' + this.position.x;
-      this.vehicleArray[vehicleKey] = this.id;
-      console.log('we placed vehicle id', this.id, 'at', vehicleKey);
     } else {
-      delete(this.vehicleArray[vehicleKey]);
+      var vehicleKey = this.position.y + '-' + this.position.x;
+      if (which == 'place') {
+        this.vehicleArray[vehicleKey] = this.id;
+        console.log('we placed vehicle id', this.id, 'at', vehicleKey);
+      } else {
+        console.log('unplacing vehicle id:', this.id, 'from spot:', vehicleKey);
+        delete(this.vehicleArray[vehicleKey]);
+      }
     }
-
   }
 
 
@@ -140,6 +142,7 @@ class Vehicle {
 /* The vehicleManager executes the logic of the cars, and passes the latest vehicle array back for rendering */
 var VehicleManager = class {
   constructor(props) {
+    this.ready = false;
     this.numVehicles = props.numVehicles;
     this.maxRows = props.maxRows;
     this.maxCols = props.maxCols;
@@ -153,6 +156,7 @@ var VehicleManager = class {
 
     this.vehicleArray = {};
     this.initializeVehicles();
+    this.ready = true;
   }
 
   
@@ -175,6 +179,10 @@ var VehicleManager = class {
   }
   
   update = () => {
+    if (!this.ready) {
+      console.log('VehicleManager not ready, not updating');
+      return;
+    }
     for (let vehicle of this.vehicles) {
       vehicle.update();
     }
@@ -216,7 +224,7 @@ class Cell extends React.Component {
   render() {
     let cellClasses;
     if (this.props.vehicleId != -1) {
-      console.log('seeking vehicle', this.props.vehicleId, this.props.vehicles);
+      //console.log('seeking vehicle', this.props.vehicleId, this.props.vehicles);
       var theVehicle = this.props.vehicles[this.props.vehicleId - 1];
       cellClasses = `${theVehicle.type} cell`;
     } else {
@@ -231,14 +239,15 @@ class Road extends React.Component {
   constructor(props) {
     super(props);
     this.numCols = 40;
-    this.state = { 
-      hotCell: '0-0',
-      vehicleManager: new VehicleManager({
+    this.vehicleManager = 
+      new VehicleManager({
         numVehicles: 10,
-        maxRows: 5,
-        maxCols: 50
-      })
-    };
+        maxRows: this.props.tableRows,
+        maxCols: this.numCols
+      });
+    this.state = {
+      vehiclesHash: this.vehicleManager.getVehicles()
+    }
   }
 
   // http://stackoverflow.com/questions/1527803/generating-random-whole-numbers-in-javascript-in-a-specific-range
@@ -249,7 +258,7 @@ class Road extends React.Component {
   componentDidMount() {
     this.timerID = setInterval(
       () => this.tick(),
-      1000
+      100
     );
   }
 
@@ -262,24 +271,25 @@ class Road extends React.Component {
      * this.setState({
      *   hotCell: newHotCell
      * });*/
-    this.state.vehicleManager.update();
+    this.vehicleManager.update();
+    this.setState({
+      vehiclesHash : this.vehicleManager.getVehicles()
+    });
   }
 
   generateRows() {
     var rowJsx = [];
     var colJsx;
     var vehicleId;
-    var vehicles = this.state.vehicleManager.getVehicles();
     //console.log('allVehicles = ', allVehicles);
-    var hotCell;
     var vehicleCoordinates;
-    console.log('vehicleArray=',vehicles.vehicleArray);
+    //console.log('vehicleArray=',this.state.vehiclesHash.vehicleArray);
     for (var i = 0; i < this.props.tableRows; ++i) {
       colJsx = [];
       for (var j = 0; j < this.numCols; ++j) {
         vehicleCoordinates = i + '-' + j;
-        vehicleId = (vehicles.vehicleArray.hasOwnProperty(vehicleCoordinates) ? vehicles.vehicleArray[vehicleCoordinates] : -1);
-        colJsx.push(<Cell vehicleId={vehicleId} vehicles={vehicles.vehicles} name={`${i}-${j}`} />);
+        vehicleId = (this.state.vehiclesHash.vehicleArray.hasOwnProperty(vehicleCoordinates) ? this.state.vehiclesHash.vehicleArray[vehicleCoordinates] : -1);
+        colJsx.push(<Cell vehicleId={vehicleId} vehicles={this.state.vehiclesHash.vehicles} name={`${i}-${j}`} />);
       }
       rowJsx.push(<div className="row"> {colJsx} </div>);
     }
