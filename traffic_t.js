@@ -143,16 +143,16 @@ class Vehicle {
 /* The vehicleManager executes the logic of the cars, and passes the latest vehicle array back for rendering */
 var VehicleManager = class {
   constructor(props) {
-    this.ready = false;
-    this.numVehicles = props.numVehicles;
-    this.maxRows = props.maxRows;
-    this.maxCols = props.maxCols;
     this.maxSpeedCtr = 1000;
     this.vehicleTypes = ['car','truck','bus'];
     this.speeds = { 
       minimum: { car: 45, truck: 25, bus: 15 },
       maximum: { car: 85, truck: 75, bus: 55 }
     };
+
+    this.numVehicles = props.numVehicles;
+    this.maxRows = props.maxRows;
+    this.maxCols = props.maxCols;
     this.vehicles = [];
 
     this.vehicleArray = {};
@@ -160,6 +160,11 @@ var VehicleManager = class {
     this.ready = true;
   }
 
+  changeProps(newProps) {
+    this.numVehicles = props.numVehicles;
+    this.maxRows = props.maxRows;
+    this.maxCols = props.maxCols;
+  }
   
   initializeVehicles = () => {
     var newVehicle;
@@ -179,11 +184,11 @@ var VehicleManager = class {
     console.log('Initialized vehicles');
   }
   
-  update = () => {
-    if (!this.ready) {
-      console.log('VehicleManager not ready, not updating');
-      return;
+  update = (props) => {
+    if (props.tableRows != this.maxRows) {
+      //console.log('we are going to change how many rows we have from', this.maxRows, 'to', props.tableRows);
     }
+    
     for (let vehicle of this.vehicles) {
       vehicle.update();
     }
@@ -242,7 +247,7 @@ class Road extends React.Component {
     this.numCols = 40;
     this.vehicleManager = 
       new VehicleManager({
-        numVehicles: 10,
+        numVehicles: this.props.numVehicles,
         maxRows: this.props.tableRows,
         maxCols: this.numCols
       });
@@ -250,7 +255,7 @@ class Road extends React.Component {
       vehiclesHash: this.vehicleManager.getVehicles()
     }
   }
-
+ 
   // http://stackoverflow.com/questions/1527803/generating-random-whole-numbers-in-javascript-in-a-specific-range
   getRandomInt(min,max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -268,7 +273,7 @@ class Road extends React.Component {
   }
 
   tick() {
-    this.vehicleManager.update();
+    this.vehicleManager.update(this.props);
     this.setState({
       vehiclesHash : this.vehicleManager.getVehicles()
     });
@@ -326,7 +331,7 @@ class TrafficApp extends React.Component {
       <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>
       <span className="control_label">{this.state.tableRows} Lanes</span>
       <ArrowControl direction="up" handleControlClicked={this.tableSizer} />
-      <div><Road tableRows={this.state.tableRows} /></div>
+      <div><Road tableRows={this.state.tableRows} numVehicles={10} /></div>
       </div>
     );
   }
@@ -334,6 +339,6 @@ class TrafficApp extends React.Component {
 }
 
 ReactDOM.render(
-  <TrafficApp tableRows={6} />,
+  <TrafficApp tableRows={4} />,
   document.getElementById('root')
 );
