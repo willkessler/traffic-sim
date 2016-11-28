@@ -31,7 +31,7 @@ class Vehicle {
 
     //console.log('set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed);
     this.placeOrRemove('random');
-    console.log('after placing, ' , props.vehicleArray);
+    //console.log('after placing, ' , props.vehicleArray);
 
   }
 
@@ -79,10 +79,12 @@ class Vehicle {
       let vehicleCoordinates = checkSpot + '-' + this.position.x;
       if (!this.vehicleArray.hasOwnProperty(vehicleCoordinates)) {
         //console.log('move vehicle:', this.id, 'from spot:' + this.position.y, 'to spot:', checkSpot);
-        this.position.y = checkSpot; // bleah, for (let...) seems to convert integer array elements into strings.
+        this.position.y = checkSpot;
+        break;
       }
     }
-    //console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
+    this.placeOrRemove('place');
+    console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
   }
 
   placeOrRemove = (which) => {
@@ -112,7 +114,16 @@ class Vehicle {
     }
   }
 
-  update = () => {
+  update = (props) => {
+    if (props.tableRows != this.maxRows) {
+      var previousMaxRows = this.maxRows;
+      this.maxRows = props.tableRows; // update if the number of lanes has changed.
+      if (this.maxRows < previousMaxRows) {
+        // move myself to the back into the road i'm in the way of a shrinking road
+        this.placeOrRemove('remove');
+        this.changeLanes();
+      }
+    }
     this.speedCtr += this.speed;
     if (this.speedCtr >= this.maxSpeedCtr) {
       this.speedCtr = 0;
@@ -128,11 +139,11 @@ class Vehicle {
       if (this.isClearInFront()) {
         //console.log('moving vehicle forward.');
         this.position.x = newX;
+        this.placeOrRemove('place');
       } else {
         //console.log('Trying to change lanes on id', this.id, 'currently in lane:', this.position.y);
         this.changeLanes();
       }
-      this.placeOrRemove('place');
     }
   }
 
@@ -160,12 +171,6 @@ var VehicleManager = class {
     this.ready = true;
   }
 
-  changeProps(newProps) {
-    this.numVehicles = props.numVehicles;
-    this.maxRows = props.maxRows;
-    this.maxCols = props.maxCols;
-  }
-  
   initializeVehicles = () => {
     var newVehicle;
     var  props = {
@@ -186,11 +191,12 @@ var VehicleManager = class {
   
   update = (props) => {
     if (props.tableRows != this.maxRows) {
-      //console.log('we are going to change how many rows we have from', this.maxRows, 'to', props.tableRows);
+      console.log('were changing how many rows we have from', this.maxRows, 'to', props.tableRows);
+      this.maxRows = props.tableRows;
     }
     
     for (let vehicle of this.vehicles) {
-      vehicle.update();
+      vehicle.update(props);
     }
   }
 
@@ -252,7 +258,8 @@ class Road extends React.Component {
         maxCols: this.numCols
       });
     this.state = {
-      vehiclesHash: this.vehicleManager.getVehicles()
+      vehiclesHash: this.vehicleManager.getVehicles(),
+      numVehicles: this.props.numVehicles
     }
   }
  
@@ -316,8 +323,14 @@ class TrafficApp extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 
-      tableRows : this.props.tableRows
+      tableRows : this.props.tableRows,
+      numVehicles: this.props.numVehicles
     };
+  }
+
+  carsControl = (direction) => {
+    this.setState( { numVehicles : (direction == 'up' ? Math.min(this.state.numVehicles + 1,20) : Math.max(1,this.state.numVehicles - 1)) } );
+    console.log('new number of vehicles will be: ', this.state.numVehicles);
   }
 
   tableSizer = (direction) => {
@@ -328,10 +341,18 @@ class TrafficApp extends React.Component {
   render() {
     return (
       <div id="app">
-      <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>
-      <span className="control_label">{this.state.tableRows} Lanes</span>
-      <ArrowControl direction="up" handleControlClicked={this.tableSizer} />
-      <div><Road tableRows={this.state.tableRows} numVehicles={10} /></div>
+        <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>
+        <span className="control_label">{this.state.tableRows} Lanes</span>
+        <ArrowControl direction="up" handleControlClicked={this.tableSizer} />
+
+        &nbsp;&nbsp;
+
+        <ArrowControl direction="down" handleControlClicked={this.carsControl}/>
+        <span className="control_label">{this.state.numVehicles} Cars</span>
+        <ArrowControl direction="up" handleControlClicked={this.carsControl} />
+
+        <div><Road tableRows={this.state.tableRows} numVehicles={this.state.numVehicles} /></div>
+
       </div>
     );
   }
@@ -339,6 +360,6 @@ class TrafficApp extends React.Component {
 }
 
 ReactDOM.render(
-  <TrafficApp tableRows={4} />,
+  <TrafficApp tableRows={2} numVehicles={10}/>,
   document.getElementById('root')
 );
