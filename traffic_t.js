@@ -34,6 +34,8 @@ class Vehicle {
     this.maxCols = props.maxCols;
     this.maxSpeedCtr = props.maxSpeedCtr;
     this.speedCtr = 0;
+    this.changeLanesCtr = 0;
+    this.changeLanesWaitCycles = 10;
     this.cautionLevel = Math.round(Math.random() * 100); // used for how much space to keep in front
     this.switchiness =  Math.round(Math.random() * 100); // propensity to change lanes if something in front of the driver
     this.speed = Math.round(Math.random() * (props.speeds.maximum[this.type] - props.speeds.minimum[this.type])) + props.speeds.minimum[this.type];
@@ -84,27 +86,32 @@ class Vehicle {
     //    if (doItChance > 0) {
     //      return;
     //    }
-    var checkSpots = [];
-    if (this.position.y == 0) {
-      checkSpots.push(1);
-    } else if (this.position.y == this.maxRows - 1) {
-      checkSpots.push(this.maxRows - 2);
+    if (this.changeLanesCtr > 0) {
+      this.changeLanesCtr--; /* do not change lanes too quickly */
     } else {
-      if (Math.round(Math.random()) == 1) {
-        checkSpots.push(Math.max(this.position.y - 1, 0));
-        checkSpots.push(Math.min(this.position.y + 1, this.maxRows - 1));
+      var checkSpots = [];
+      if (this.position.y == 0) {
+        checkSpots.push(1);
+      } else if (this.position.y == this.maxRows - 1) {
+        checkSpots.push(this.maxRows - 2);
       } else {
-        checkSpots.push(Math.min(this.position.y + 1, this.maxRows - 1));
-        checkSpots.push(Math.max(this.position.y - 1, 0));
+        if (Math.round(Math.random()) == 1) {
+          checkSpots.push(Math.max(this.position.y - 1, 0));
+          checkSpots.push(Math.min(this.position.y + 1, this.maxRows - 1));
+        } else {
+          checkSpots.push(Math.min(this.position.y + 1, this.maxRows - 1));
+          checkSpots.push(Math.max(this.position.y - 1, 0));
+        }
       }
-    }
-    var lastPos  = this.position.y;
-    for (let checkSpot of checkSpots) {
-      let vehicleCoordinates = checkSpot + '-' + this.position.x;
-      if (!this.vehicleArray.hasOwnProperty(vehicleCoordinates)) {
-        //debug(['move vehicle:', this.id, 'from spot:' + this.position.y, 'to spot:', checkSpot]);
-        this.position.y = checkSpot;
-        break;
+      var lastPos  = this.position.y;
+      for (let checkSpot of checkSpots) {
+        let vehicleCoordinates = checkSpot + '-' + this.position.x;
+        if (!this.vehicleArray.hasOwnProperty(vehicleCoordinates)) {
+          //debug(['move vehicle:', this.id, 'from spot:' + this.position.y, 'to spot:', checkSpot]);
+          this.position.y = checkSpot;
+          this.changeLanesCtr = this.changeLanesWaitCycles;
+          break;
+        }
       }
     }
     this.placeOrRemove('place');
