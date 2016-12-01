@@ -198,7 +198,7 @@ var VehicleManager = class {
       maximum: { car: 85, truck: 75, bus: 55 }
     };
 
-    this.numVehicles = props.numVehicles;
+    this.numVehicles = 0; // we will update this as we add cars
     this.maxRows = props.maxRows;
     this.maxCols = props.maxCols;
     this.vehicles = [];
@@ -208,7 +208,7 @@ var VehicleManager = class {
     this.ready = true;
   }
 
-  initializeVehicles() {
+  addVehicle() {
     var newVehicle;
     var  props = {
       vehicleArray: this.vehicleArray, 
@@ -217,20 +217,42 @@ var VehicleManager = class {
       maxRows:      this.maxRows, 
       maxCols:      this.maxCols, 
       maxSpeedCtr:  this.maxSpeedCtr,
-      speeds:       this.speeds
+      speeds:       this.speeds,
+      vId:          this.numVehicles
     };
+    newVehicle = new Vehicle(props);
+    this.vehicles.push(newVehicle);
+    this.numVehicles++;
+  }
+
+  removeVehicle() {
+    if (this.numVehicles > 0) {
+      var deletedVehicle = this.vehicles.pop();
+      let vehicleCoordinates = deletedVehicle.position.y + '-' + deletedVehicle.position.x;    
+      delete(this.vehicleArray[vehicleCoordinates]);
+      this.numVehicles--;
+    }
+  }
+
+  initializeVehicles() {
     for (var i = 0; i < this.numVehicles; ++i) {
-      props.vId = i;
-      newVehicle = new Vehicle(props);
-      this.vehicles.push(newVehicle);
+      this.addVehicle();
     }
     debug(['Initialized vehicles']);
   }
   
   update (props) {
     if (props.tableRows != this.maxRows) {
-      console.log('were changing how many rows we have from', this.maxRows, 'to', props.tableRows);
+      console.log('We are changing how many rows we have from', this.maxRows, 'to', props.tableRows);
       this.maxRows = props.tableRows;
+    }
+    if (props.numVehicles != this.numVehicles) {
+      console.log('We are changing the number of vehicles from', this.numVehicles, 'to', props.numVehicles);
+      if (props.numVehicles > this.numVehicles) {
+        this.addVehicle();
+      } else {
+        this.removeVehicle();
+      }
     }
     
     var vehicleArraySnap = Object.assign({}, this.vehicleArray);
@@ -263,7 +285,7 @@ class ArrowControl extends React.Component {
   }
 
   render() {
-    return (<span className="arrow" onClick={this.handleControlClicked}> { (this.direction == "down" ? "<" : ">") } </span>);
+    return (<button className="arrow" onClick={this.handleControlClicked}> { (this.direction == "down" ? "<" : ">") } </button>);
   }
 
 }
@@ -370,7 +392,7 @@ class TrafficApp extends React.Component {
   }
 
   carsControl = (direction) => {
-    this.setState( { numVehicles : (direction == 'up' ? Math.min(this.state.numVehicles + 1,20) : Math.max(1,this.state.numVehicles - 1)) } );
+    this.setState( { numVehicles : (direction == 'up' ? Math.min(this.state.numVehicles + 1,20) : Math.max(0,this.state.numVehicles - 1)) } );
     console.log('new number of vehicles will be: ', this.state.numVehicles);
   }
 
@@ -382,14 +404,14 @@ class TrafficApp extends React.Component {
   render() {
     return (
       <div id="app">
-        <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>
-        <span className="control_label">{this.state.tableRows} Lanes</span>
+        <ArrowControl direction="down" handleControlClicked={this.tableSizer}/>&nbsp;
+        <span className="control_label">{this.state.tableRows} Lanes</span>&nbsp;
         <ArrowControl direction="up" handleControlClicked={this.tableSizer} />
 
         &nbsp;&nbsp;
 
-        <ArrowControl direction="down" handleControlClicked={this.carsControl}/>
-        <span className="control_label">{this.state.numVehicles} Cars</span>
+        <ArrowControl direction="down" handleControlClicked={this.carsControl}/>&nbsp;
+        <span className="control_label">{this.state.numVehicles} Cars</span>&nbsp;
         <ArrowControl direction="up" handleControlClicked={this.carsControl} />
 
         <div><Road tableRows={this.state.tableRows} numVehicles={this.state.numVehicles} updateInterval={10} /></div>
@@ -401,6 +423,6 @@ class TrafficApp extends React.Component {
 }
 
 ReactDOM.render(
-  <TrafficApp tableRows={2} numVehicles={15}/>,
+  <TrafficApp tableRows={2} numVehicles={1}/>,
   document.getElementById('root')
 );
