@@ -1,3 +1,10 @@
+var debugging = false;
+function debug(str) {
+  if (debugging) {
+    console.log(str.join(' '));
+  }
+}
+
 var Dog = class {
   constructor(props) {
     this.state = {
@@ -19,8 +26,10 @@ class Vehicle {
     var theType = props.vehicleTypes[Math.floor(Math.random() * (props.vehicleTypes.length))];
     //console.log(theType);
     this.id = props.vId;
+    debug(['creating vehicle with id:', props.vId]);
     this.type = theType;
     this.vehicleArray = props.vehicleArray;
+    this.vehicles = props.vehicles;
     this.maxRows = props.maxRows;
     this.maxCols = props.maxCols;
     this.maxSpeedCtr = props.maxSpeedCtr;
@@ -29,32 +38,47 @@ class Vehicle {
     this.switchiness =  Math.round(Math.random() * 100); // propensity to change lanes if something in front of the driver
     this.speed = Math.round(Math.random() * (props.speeds.maximum[this.type] - props.speeds.minimum[this.type])) + props.speeds.minimum[this.type];
 
-    //console.log('set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed);
+    //debug(['set vehicle id ' + this.id + ' of type ' + this.type + ' to speed ' + this.speed]);
     this.placeOrRemove('random');
-    //console.log('after placing, ' , props.vehicleArray);
+    //debug(['after placing, ' , props.vehicleArray]);
 
   }
 
+  sanityCheck() {
+    var positions = [];
+    var posHash = {};
+    for (let vehicle of this.vehicles) {
+      let coord = vehicle.position.y + '-' + vehicle.position.x;
+      positions.push(coord + '-' + vehicle.id);
+      posHash[coord] = vehicle.id;
+    }
+    if (Object.keys(posHash).length != positions.length) {
+      console.log('Overlapping cars after updating id:', this.id, positions);
+      debugger;
+    }
+    
+  }
 
-  isClearInFront = () => {
+  isClearInFront() {
     // Check if there's enough space in front of you to move. Depending on driver "cautionLevel" value, this may be more or less spaces.
     // Number of squares to check : (speed / 10) * cautionLevel. Ie, more cautious leaves more space, one square for each 10mph
-    var numSquaresToCheck = Math.round((this.speed / 10) * (this.cautionLevel / 100));
+    var numSquaresToCheck = Math.max(1,Math.round((this.speed / 10) * (this.cautionLevel / 100)));
 
-    var clear = true, newX, vehicleKey;
-    for (var i = 1, newX, newY; i <= numSquaresToCheck; ++i) {
-      newX = Math.max(this.position.x - i,0);
+    var clear = true, newX, newXtmp, vehicleKey;
+    for (var i = 1; i <= numSquaresToCheck; ++i) {
+      newXtmp = this.position.x - i;
+      newX = (newXtmp >= 0 ? newXtmp : newXtmp + this.maxCols);
       vehicleKey = this.position.y + '-' + newX;
       if (this.vehicleArray.hasOwnProperty(vehicleKey)) {
         clear = false;
-        //console.log('Vehicle id ' + this.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + this.cautionLevel);
+        //debug(['Vehicle id ' + this.id + ' not clear ' + numSquaresToCheck + ' squares in front, caution value:' + this.cautionLevel]);
         break;
       }
     }
     return(clear);
   }
 
-  changeLanes = () => {
+  changeLanes() {
     // console.log('Changing lanes on vehicle id: ' + vehicle.id);
     // var doItChance = Math.round(Math.random() * 2);
     //    if (doItChance > 0) {
@@ -75,19 +99,23 @@ class Vehicle {
       }
     }
     var lastPos  = this.position.y;
-    for (const checkSpot of checkSpots) {
+    for (let checkSpot of checkSpots) {
       let vehicleCoordinates = checkSpot + '-' + this.position.x;
       if (!this.vehicleArray.hasOwnProperty(vehicleCoordinates)) {
-        //console.log('move vehicle:', this.id, 'from spot:' + this.position.y, 'to spot:', checkSpot);
+        //debug(['move vehicle:', this.id, 'from spot:' + this.position.y, 'to spot:', checkSpot]);
         this.position.y = checkSpot;
         break;
       }
     }
     this.placeOrRemove('place');
-    console.log('Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos);
+
+    if( lastPos != this.position.y ) {
+      debug(['Changed lanes on vehicle id: ' + this.id + ' to lane: ' + this.position.y + ' from lane: ' + lastPos]);
+    }
+
   }
 
-  placeOrRemove = (which) => {
+  placeOrRemove (which) {
     if (which == 'random') {
       var placed = false;
       while (!placed) {
@@ -96,7 +124,7 @@ class Vehicle {
           y: Math.round(Math.random() * (this.maxRows - 1))
         };
         vehicleKey = this.position.y + '-' + this.position.x;
-        //console.log('Trying to place id:',this.id, 'at position:', vehicleKey);
+        //debug(['Trying to place id:',this.id, 'at position:', vehicleKey]);
         if (!this.vehicleArray.hasOwnProperty(vehicleKey)) {
           this.vehicleArray[vehicleKey] = this.id;
           placed = true;
@@ -106,15 +134,16 @@ class Vehicle {
       var vehicleKey = this.position.y + '-' + this.position.x;
       if (which == 'place') {
         this.vehicleArray[vehicleKey] = this.id;
-        //console.log('We placed vehicle id', this.id, 'at', vehicleKey);
+        //debug(['We placed vehicle id', this.id, 'at', vehicleKey]);
       } else {
-        //console.log('Unplacing vehicle id:', this.id, 'from spot:', vehicleKey);
+        //debug(['Unplacing vehicle id:', this.id, 'from spot:', vehicleKey]);
         delete(this.vehicleArray[vehicleKey]);
       }
     }
+    this.sanityCheck();
   }
 
-  update = (props) => {
+  update (props) {
     if (props.tableRows != this.maxRows) {
       var previousMaxRows = this.maxRows;
       this.maxRows = props.tableRows; // update if the number of lanes has changed.
@@ -132,16 +161,17 @@ class Vehicle {
       var newY = this.position.y;
       if (newX < 0) {
         newX = this.maxCols - 1; 
+        debug(['vehicle id:', this.id, 'wrapped']);
         // When vehicle wraps around, put them in a new row for variety's sake
         // newY = Math.round(Math.random() * this.maxRows);
       }
       this.position.y = newY;
       if (this.isClearInFront()) {
-        //console.log('moving vehicle forward.');
+        //debug(['moving vehicle forward.']);
         this.position.x = newX;
         this.placeOrRemove('place');
       } else {
-        //console.log('Trying to change lanes on id', this.id, 'currently in lane:', this.position.y);
+        //debug(['Trying to change lanes on id', this.id, 'currently in lane:', this.position.y]);
         this.changeLanes();
       }
     }
@@ -171,36 +201,39 @@ var VehicleManager = class {
     this.ready = true;
   }
 
-  initializeVehicles = () => {
+  initializeVehicles() {
     var newVehicle;
     var  props = {
       vehicleArray: this.vehicleArray, 
       vehicleTypes: this.vehicleTypes,
+      vehicles:     this.vehicles,
       maxRows:      this.maxRows, 
       maxCols:      this.maxCols, 
       maxSpeedCtr:  this.maxSpeedCtr,
       speeds:       this.speeds
     };
-    for (var i = 0; i++ < this.numVehicles;) {
+    for (var i = 0; i < this.numVehicles; ++i) {
       props.vId = i;
       newVehicle = new Vehicle(props);
       this.vehicles.push(newVehicle);
     }
-    console.log('Initialized vehicles');
+    debug(['Initialized vehicles']);
   }
   
-  update = (props) => {
+  update (props) {
     if (props.tableRows != this.maxRows) {
       console.log('were changing how many rows we have from', this.maxRows, 'to', props.tableRows);
       this.maxRows = props.tableRows;
     }
     
+    var vehicleArraySnap = Object.assign({}, this.vehicleArray);
+    debug(['Beginning vehicles update, vehicleArray:', vehicleArraySnap]);
     for (let vehicle of this.vehicles) {
       vehicle.update(props);
     }
   }
 
-  getVehicles = () => {
+  getVehicles() {
     return({ 
       vehicles: this.vehicles,
       vehicleArray: this.vehicleArray
@@ -237,7 +270,7 @@ class Cell extends React.Component {
     let cellClasses;
     if (this.props.vehicleId != -1) {
       //console.log('seeking vehicle', this.props.vehicleId, this.props.vehicles);
-      var theVehicle = this.props.vehicles[this.props.vehicleId - 1];
+      var theVehicle = this.props.vehicles[this.props.vehicleId];
       cellClasses = `${theVehicle.type} cell`;
     } else {
       cellClasses = 'cell';
@@ -257,6 +290,7 @@ class Road extends React.Component {
         maxRows: this.props.tableRows,
         maxCols: this.numCols
       });
+    this.updateInterval = this.props.updateInterval;
     this.state = {
       vehiclesHash: this.vehicleManager.getVehicles(),
       numVehicles: this.props.numVehicles
@@ -271,7 +305,7 @@ class Road extends React.Component {
   componentDidMount() {
     this.timerID = setInterval(
       () => this.tick(),
-      10
+      this.updateInterval,
     );
   }
 
@@ -351,7 +385,7 @@ class TrafficApp extends React.Component {
         <span className="control_label">{this.state.numVehicles} Cars</span>
         <ArrowControl direction="up" handleControlClicked={this.carsControl} />
 
-        <div><Road tableRows={this.state.tableRows} numVehicles={this.state.numVehicles} /></div>
+        <div><Road tableRows={this.state.tableRows} numVehicles={this.state.numVehicles} updateInterval={10} /></div>
 
       </div>
     );
@@ -360,6 +394,6 @@ class TrafficApp extends React.Component {
 }
 
 ReactDOM.render(
-  <TrafficApp tableRows={2} numVehicles={10}/>,
+  <TrafficApp tableRows={2} numVehicles={15}/>,
   document.getElementById('root')
 );
