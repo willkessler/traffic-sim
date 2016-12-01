@@ -129,7 +129,7 @@ var vehicleFactory = function(vId) {
     vehicle.isClearInFront = function() {
         // Check if there's enough space in front of you to move. Depending on driver "cautionLevel" value, this may be more or less spaces.
         // Number of squares to check : (speed / 10) * cautionLevel. Ie, more cautious leaves more space, one square for each 10mph
-        var numSquaresToCheck = Math.round((vehicle.speed / 10) * (vehicle.cautionLevel / 100));
+        var numSquaresToCheck = Math.min(1,Math.round((vehicle.speed / 10) * (vehicle.cautionLevel / 100)));
 
         var clear = true;
         for (var i = 1, newX, newY; i <= numSquaresToCheck; ++i) {
